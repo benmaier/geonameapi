@@ -80,7 +80,6 @@ class SearchPlace(Resource):
                              """)
 
         suggestions = [ list(list(i[1])[0]) for i in groupby(query.cursor.fetchall(),key=lambda x:x[0]) ]
-        print(suggestions)
 
         response = json.dumps(suggestions,ensure_ascii=False)
         response = Response(response,content_type="application/json; charset=utf-8" )

@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <div class="mypanel"></div>
+
+    <!-- <span class="flag-icon flag-icon-gr"></span> -->
+    <script>
+    $.getJSON('/api/searchplaces?string=Berlin', function(data) {
+        console.log(data);
+
+        var text = `Date: ${data['suggestions'][0][1]}<br>
+                    Time: ${data.time}<br>
+                    Unix time: ${data.milliseconds_since_epoch}`;
+
+
+        $(".mypanel").html(text);
+    });
+    </script>
+{% endblock %}
+
+

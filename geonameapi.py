@@ -1,1 +1,1 @@
-from testapp import app
+from geonameapp import app
