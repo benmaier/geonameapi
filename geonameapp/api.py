@@ -77,6 +77,7 @@ class SearchPlace(Resource):
 		  end
 		, alternatename.isShortName DESC
 		, alternatename.isPreferredName DESC
+        LIMIT 50
                              """)
 
         suggestions = [ list(list(i[1])[0]) for i in groupby(query.cursor.fetchall(),key=lambda x:x[0]) ]
@@ -123,6 +124,7 @@ class SearchCountryOrContinent(Resource):
 		  end
 		, alternatename.isShortName DESC
 		, alternatename.isPreferredName DESC
+        LIMIT 50
                              """)
 
         suggestions = [ list(list(i[1])[0]) for i in groupby(query.cursor.fetchall(),key=lambda x:x[0]) ]
