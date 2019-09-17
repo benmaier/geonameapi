@@ -7,7 +7,7 @@ A small webserver that searches for populated places on earth by sending request
 
 ## Prerequisites
 
-First, you need to copy the geoname database to your own mysql-server. Copy this adapted GeonameSQL-Importer and follow the instructions therein.
+First, you need to copy the geoname database to your own mysql-server. Clone this [adapted GeonameSQL-Importer](https://github.com/benmaier/GeoNames-MySQL-DataImport) and follow the instructions therein.
 
 Afterwards, add a config-file containing information about the database to your home directory. It must have the path
 
