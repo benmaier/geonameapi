@@ -1,6 +1,6 @@
 "use strict";
 
-class GeoSearch
+class GeoSearchWidget
 {
     constructor(parentId){
 
@@ -21,6 +21,14 @@ class GeoSearch
 
         this.searchSelected = [];
         this.searchData = {};
+        this.api_url = '/api/searchplaces';
+    }
+
+    apiUrl(url) {
+      if (!arguments.length) return this.api_url;
+      
+      this.api_url = url;
+      return this;
     }
 
     search(){
@@ -29,10 +37,12 @@ class GeoSearch
 
         let searchstring = $(`input[name=${pId}-placesearch]`).val();
 
+        $(`#${pId}-searchsuggestions`).html('');
+
         if (searchstring.length>1)
         {
         
-            $.getJSON('/api/searchplaces?string='+searchstring, function(data) {
+            $.getJSON(self.api_url+'?string='+searchstring, function(data) {
 
                 self.searchData = {};
                 data.forEach(function(entry){
@@ -47,10 +57,6 @@ class GeoSearch
 
             });
             
-        }
-        else
-        {
-            $(`#${pId}-searchsuggestions`).html('');
         }
 
     }

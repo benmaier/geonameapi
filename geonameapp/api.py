@@ -98,6 +98,8 @@ class SearchCountryOrContinent(Resource):
             country,
             countryinfo.name,
             geoname.fcode,
+            featureCodes.name, 
+            featureCodes.description, 
             geoname.population,  
             alternatename.alternatename
         FROM
@@ -108,6 +110,8 @@ class SearchCountryOrContinent(Resource):
             geoname ON searchresult.geonameid = geoname.geonameid
         JOIN
             alternatename ON alternatename.geonameid = geoname.geonameid
+        JOIN 
+            featureCodes ON featureCodes.code = CONCAT(geoname.fclass,'.',geoname.fcode)
         LEFT JOIN
             countryinfo ON countryinfo.iso_alpha2 = geoname.country
         WHERE 

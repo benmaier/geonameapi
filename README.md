@@ -52,7 +52,7 @@ source env/bin/activate
 Then run the app
 
 ```bash
-FLASK_APP=geonameapi.py flask run
+FLASK_APP=apigeoname.py flask run
 ```
 
 ## Usage

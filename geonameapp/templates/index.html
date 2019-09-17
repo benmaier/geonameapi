@@ -2,14 +2,20 @@
 
 {% block content %}
 
-    <div class="w3-left">GeoSearch:</div> 
+    <div>Search Place:</div> 
     </div>
-    <div id="geosearch" class="" style="width:300">
+    <div id="geosearchPlace" class="" style="width:300">
+    </div>
+
+    <div>Search Country/Region/Continent:</div> 
+    </div>
+    <div id="geosearchRgn" class="" style="width:300">
     </div>
 
     <script>
 
-    geosearch = new GeoSearch("geosearch");
+    geosearch0 = new GeoSearchWidget("geosearchPlace");
+    geosearch1 = (new GeoSearchWidget("geosearchRgn")).apiUrl('/api/searchcountryregioncontinent');
 
     </script>
 {% endblock %}
