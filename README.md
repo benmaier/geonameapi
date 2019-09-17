@@ -55,4 +55,51 @@ Then run the app
 FLASK_APP=geonameapi.py flask run
 ```
 
+## Usage
+
+Use either the small interface in `localhost:5000/` or send custom requests to
+
+```
+    localhost:5000/api/searchplaces?string=YourSearchString
+```
+
+or 
+
+```
+    localhost:5000/api/searchcountryregioncontinent?string=YourSearchString
+```
+
+You'll get a json response encoded in `utf8`.
+
+The entries in a `/searchplaces`-request are ordered as
+
+```python
+[
+   geonameid,
+   name,
+   countrycode, #(2 characters, iso)
+   countryname,
+   featurecode,
+   featurename,
+   featuredescription,
+   population,
+   alternatename
+]
+```
+
+For a `/searchcountryregioncontinent`-request, the response is ordered as
+
+```python
+[
+   geonameid,
+   name,
+   countrycode, #(2 characters, iso)
+   countryname,
+   featurecode,
+   population,
+   alternatename
+]
+```
+
+Note that a single geonameid will appear multiple times with different `alternatename`s. These are ordered after `[ISO_LANGUAGE, "en", ""]` where `ISO_LANGUAGE` refers to the corresponding property `Config.ISO_LANGUAGE` in `/config.py`.
 

@@ -8,6 +8,7 @@ with (Path.home() / '.geonames' / 'db.json').open('r') as f:
 class Config(object):
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
     GEO_DB = dbcfg
+    ISO_LANGUAGE = 'de'
 
 if __name__ == "__main__":
     print(dbcfg)

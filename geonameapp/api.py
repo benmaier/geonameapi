@@ -60,6 +60,7 @@ class SearchPlace(Resource):
 			when geoname.fcode = 'CONT' then 0.25
 			when geoname.fcode = 'PCLI' then 0.5
 			when geoname.fcode = 'PPLC' then 1
+			when geoname.fcode = 'PPLA' then 1.2
 			when geoname.fcode = 'ADM1' then 2
 			when geoname.fcode = 'ADM2' then 3
 			when geoname.fcode = 'ADM3' then 4
@@ -71,7 +72,7 @@ class SearchPlace(Resource):
 		  end
 		, population DESC
 		, case
-			when alternatename.isoLanguage = 'de' then 0
+			when alternatename.isoLanguage = '"""+app.config['ISO_LANGUAGE']+"""' then 0
 			when alternatename.isoLanguage = 'en' then 1
 			when alternatename.isoLanguage = '' then 2
 		  end
@@ -118,7 +119,7 @@ class SearchCountryOrContinent(Resource):
         ORDER BY  
 		population DESC
 		, case
-			when alternatename.isoLanguage = 'de' then 0
+			when alternatename.isoLanguage = '"""+app.config['ISO_LANGUAGE']+"""' then 0
 			when alternatename.isoLanguage = 'en' then 1
 			when alternatename.isoLanguage = '' then 2
 		  end
@@ -136,7 +137,7 @@ class SearchCountryOrContinent(Resource):
 
 
 api.add_resource(SearchPlace, '/api/searchplaces')
-api.add_resource(SearchCountryOrContinent, '/api/searchcountryorcontinent')
+api.add_resource(SearchCountryOrContinent, '/api/searchcountryregioncontinent')
 
 if __name__ == '__main__':
      app.run(port='5002')
