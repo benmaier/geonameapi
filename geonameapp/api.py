@@ -11,10 +11,10 @@ from itertools import groupby
 
 geo_db_connect = create_engine('mysql+pymysql://{0}:{1}@{2}:{3}/{4}?charset=utf8mb4'.format(
                                 app.config['GEO_DB']['user'],
-                                app.config['GEO_DB']['passwd'],
+                                app.config['GEO_DB']['password'],
                                 app.config['GEO_DB']['host'],
                                 app.config['GEO_DB']['port'],
-                                app.config['GEO_DB']['dbname'],
+                                app.config['GEO_DB']['db'],
                             ),
                             )
 
