@@ -3,10 +3,18 @@
 {% block content %}
 
     <!-- <span class="flag-icon flag-icon-gr"></span> -->
-    <input type="text" name="placesearch"></input>
-    <div id="mypanel"></div>
+    <div class="w3-left">GeoSearch:</div> 
+    <div id="geosearch" class="" style="width:300">
+        <div id="searchselected" class="w3-container"></div>
+        <div id="searchinput" class="w3-container"><span class="w3-badge w3-green">+</span>&nbsp;<input type="text" name="placesearch"></input></div>
+        <div id="searchsuggestions" style="position: absolute; z-index:999;"></div>
+    </div>
+    </div>
+
     <script>
-    $('input[name=placesearch]') .keyup(_.debounce(search , 200));
+    $('input[name=placesearch]') .keyup(_.debounce(search , 500));
+    
+    window.searchSelected = [];
 
     function search(){
         let searchstring = $('input[name=placesearch]').val();
@@ -17,22 +25,46 @@
         
             $.getJSON('/api/searchplaces?string='+searchstring, function(data) {
 
+                window.searchData = {};
                 data.forEach(function(entry){
-                    text += getLocationDiv(entry);
+                    text += getLocationSuggestionDiv(entry);
+                    window.searchData[entry[0]] = entry;
                 });
 
-                $("#mypanel").html(text);
+
+                $("#searchsuggestions").html(text);
 
             });
         }
         else
         {
-            $("#mypanel").html(text);
+            $("#searchsuggestions").html(text);
         }
 
     }
 
-    function getLocationDiv(entry) {
+    function locationSelected(geonameid) {
+
+        if (window.searchSelected.indexOf(geonameid) >= 0)
+        {
+            $("#searchsuggestions").html("");
+            $('input[name=placesearch]').val('');
+        
+            return;
+        }
+
+        entry = window.searchData[geonameid];
+        window.searchSelected.push(geonameid);
+
+        let selected = getLocationSelectedDiv(entry);
+        
+        $("#searchselected").append(selected);
+        $("#searchsuggestions").html("");
+        $('input[name=placesearch]').val('');
+
+    }
+
+    function getLocationSelectedDiv(entry) {
         let geonameid = entry[0];
         let asciiname = entry[1];
         let countrycode = entry[2];
@@ -43,21 +75,101 @@
         let population = entry[7];
         let name = entry[8];
 
-        if (name == '')
-            name = asciiname;
-        
-        let text = `<div class="w3-container">`;
+        let humanformat = d3.format(".2s");
 
-        text += `<p>${name}`;
+        let text = `<div id="selectedlocation-${geonameid}" class="w3-margin-bottom w3-animate-bottom">`;
 
-        if (countrycode.length == 2)
+        text += `<span class="w3-badge w3-red pointer w3-small" onclick="deleteSelected(${geonameid})">x</span> &nbsp;`;
+
+        text += `<span class="w3-margin-bottom w3-light-grey w3-padding">`;
+
+
+        if ((countrycode.length == 2))
         {
-            text += `&nbsp;<span class="flag-icon flag-icon-${countrycode.toLowerCase()}"></span>`;
+            text += `<span class="flag-icon flag-icon-${countrycode.toLowerCase()}"></span>&nbsp;`;
         }
+
+        text += `<span>${name}</span>&nbsp;`;
+
+        text += "</span>";
+
+        return text;
+
+    }
+
+    function deleteSelected(geonameid) {
+        $("#selectedlocation-"+geonameid).fadeOut(150);
+        //$("#selectedlocation-"+geonameid).on(
+        //    "webkitTransitionEnd otransitionend oTransitionEnd msTransitionEnd transitionend",
+        //    () => $("#selectedlocation-"+geonameid).remove()
+        //  );
+        setTimeout(() => $("#selectedlocation-"+geonameid).remove(), 500);
+        window.searchSelected.splice(window.searchSelected.indexOf(geonameid),1);
+    }
+
+    function getLocationSuggestionDiv(entry) {
+        let geonameid = entry[0];
+        let asciiname = entry[1];
+        let countrycode = entry[2];
+        let country = entry[3];
+        let fcode = entry[4];
+        let fcodeDescription = entry[5];
+        let fcodeExplanation = entry[6];
+        let population = entry[7];
+        let name = entry[8];
+
+        let humanformat = d3.format(".2s");
+
+        if (name == '')
+        {
+            name = asciiname;
+            entry[8] = asciiname;
+        }
+        
+        let text = `<div class="w3-container">
+                        <div class="w3-container 
+                                    w3-hover-light-grey 
+                                    w3-border
+                                    w3-white
+                                    pointer
+                                    " 
+                             onclick="locationSelected(${geonameid})"
+                   >`;
+
+        text += `<p>`;
+
+        if ((countrycode.length == 2) && (fcode == 'PCLI'))
+        {
+            text += `<span class="flag-icon flag-icon-${countrycode.toLowerCase()}"></span>&nbsp;`;
+        }
+
+        text += `${name}`;
+
+        if (asciiname!=name)
+        {
+            text += '&nbsp;<span class="w3-small">';
+            text += `(${asciiname})`;
+            text += '</span>';
+        }
+
+        if ((country !== null) && (fcode != 'PCLI'))
+        {
+            text += '<br/><span class="w3-small">';
+            text += `<span class="flag-icon flag-icon-${countrycode.toLowerCase()}"></span>&nbsp;`;
+            text += country + ' (' + countrycode + ')';
+            text += '</span>';
+        }
+
+        if (fcode != null)
+        {
+            text += `<br/><span class="w3-small w3-text-grey" alt="${fcodeExplanation}">${fcode}: ${fcodeDescription},&nbsp;</span>`
+        }
+
+        text += `<span class="w3-small w3-text-grey">Population: `+humanformat(population)+`</span>`;
 
         text += '</p>';
 
-        text += `</div>`;
+        text += `</div></div>`;
 
         return text;
 

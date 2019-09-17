@@ -26,7 +26,7 @@ class SearchPlace(Resource):
         query = conn.execute("""
         SELECT DISTINCT 
             geoname.geonameid, 
-            asciiname, 
+            geoname.name, 
             country,
             countryinfo.name,
             geoname.fcode,
@@ -77,7 +77,7 @@ class SearchPlace(Resource):
 		  end
 		, alternatename.isShortName DESC
 		, alternatename.isPreferredName DESC
-        LIMIT 50
+        LIMIT 300
                              """)
 
         suggestions = [ list(list(i[1])[0]) for i in groupby(query.cursor.fetchall(),key=lambda x:x[0]) ]
@@ -93,7 +93,7 @@ class SearchCountryOrContinent(Resource):
         query = conn.execute("""
         SELECT DISTINCT 
             geoname.geonameid, 
-            asciiname, 
+            geoname.name, 
             country,
             countryinfo.name,
             geoname.fcode,
@@ -114,7 +114,7 @@ class SearchCountryOrContinent(Resource):
             AND 
                 (alternatename.isoLanguage = 'de' OR  alternatename.isoLanguage = 'en' OR alternatename.isoLanguage = '')
             AND
-                ( geoname.fcode = 'CONT' OR geoname.fcode = 'PCLI' )
+                ( geoname.fcode = 'CONT' OR geoname.fcode = 'PCLI' OR geoname.fcode = 'RGN')
         ORDER BY  
 		population DESC
 		, case
@@ -124,7 +124,7 @@ class SearchCountryOrContinent(Resource):
 		  end
 		, alternatename.isShortName DESC
 		, alternatename.isPreferredName DESC
-        LIMIT 50
+        LIMIT 300
                              """)
 
         suggestions = [ list(list(i[1])[0]) for i in groupby(query.cursor.fetchall(),key=lambda x:x[0]) ]
