@@ -33,7 +33,10 @@ class SearchPlace(Resource):
             featureCodes.name, 
             featureCodes.description, 
             geoname.population,  
-            alternatename.alternatename
+            alternatename.alternatename,
+            alternatename.isoLanguage,
+            alternatename.isShortName,
+            alternatename.isPreferredName
         FROM
 	    (SELECT * FROM alternatename WHERE alternatename LIKE '"""+request.args['string']+"""%%')
 	    AS 
@@ -101,7 +104,10 @@ class SearchCountryOrContinent(Resource):
             featureCodes.name, 
             featureCodes.description, 
             geoname.population,  
-            alternatename.alternatename
+            alternatename.alternatename,
+            alternatename.isoLanguage,
+            alternatename.isShortName,
+            alternatename.isPreferredName
         FROM
 	    (SELECT * FROM alternatename WHERE alternatename LIKE '"""+request.args['string']+"""%%')
 	    AS 
