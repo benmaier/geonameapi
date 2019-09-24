@@ -1,0 +1,19 @@
+.country-unselected {
+    fill: #bbb;
+    stroke: #fff;
+}
+
+.country-selected {
+    fill: #88f;
+    stroke: #fff;
+}
+
+.smallcountry-unselected {
+    fill: none;
+    stroke: none;
+}
+
+.smallcountry-selected {
+    fill: none;
+    stroke: #88f;
+}

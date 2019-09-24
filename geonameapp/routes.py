@@ -5,3 +5,7 @@ from geonameapp import app
 @app.route('/index')
 def index():
     return render_template('index.html')
+
+@app.route('/regions')
+def regions():
+    return render_template('regions.html')

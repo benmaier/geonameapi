@@ -1,0 +1,222 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+    <div class="w3-row">
+        <div class="w3-col m3 l3"><div id="regioncontainer"></div></div>
+        <div class="w3-col m9 l9">
+            <div id="mapcontainer" class="w3-align-left w3-container">
+                <svg id="map" width="1000" height="420"></svg>
+            </div>
+            <div id="countrycontainer">
+                
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+    
+    var contToRegion = {};
+    var parentToCountry = {};
+    var allCountries = {};
+    var smallCountries = [];
+    var largeCountries = [];
+    var projection;
+    var minimum_spherical_area = 0.0002;
+    
+    //geosearch1 = (new GeoSearchWidget("geosearchRgn")).apiUrl('/api/searchcountryregioncontinent');
+
+    $.getJSON('/api/countryshapes', function(data) {
+        window.shapes = data;
+
+        projection = d3.geoKavrayskiy7()
+                           .rotate([-11,0])
+                           .clipAngle(180)
+        let geopath = d3.geoPath(projection);
+
+
+        largeCountries = window.shapes.features.filter(function(f){
+            let this_area = d3.geoArea(f)
+            console.log(f.properties.name, this_area)
+            return this_area > minimum_spherical_area; // area of taiwan
+        })
+
+
+        d3.select("svg")
+          .selectAll("path")
+          .data(largeCountries)
+        .enter()
+          .append("path")
+          .attr("d",geopath)
+          .attr("class","country-unselected")
+          .on("mouseover",function(){d3.select(this).attr("class","country-selected")})
+          .on("mouseout",function(){d3.select(this).attr("class","country-unselected")})
+          .append("svg:title")
+            .text(function(d) { return d.name });
+
+
+        $.getJSON('/api/regiontree', function(treedata) {
+            
+            let continents = treedata.contToRegion.map(function(x) { return {name: x.name, geonameid: x.geonameid} });
+
+            treedata.contToRegion.forEach( x => contToRegion[x.geonameid] = x.children);
+            treedata.regionToCountry.forEach( x=> parentToCountry[x.geonameid] = x.children);
+            treedata.contToCountry.forEach( x=> parentToCountry[x.geonameid] = x.children);
+
+            Object.values(parentToCountry).forEach(function(x){
+                x.forEach(function(y){
+                    allCountries[y.country] = y
+                })
+            })
+
+            d3.select("#regioncontainer")
+                .selectAll("div.continent")
+                    .data(continents)
+                    .enter()
+                    .append("div")
+                    .attr("class","continent")
+                    .append("div")
+                    .attr("class","w3-button w3-green w3-block w3-left-align")
+                    .attr("id",d=>"geonameid-"+d.geonameid)
+                    .text(d=>d.name)
+                    .on("click",d=>accordion("geonameid-"+d.geonameid+"-content"))
+                    .on("mouseover",d=>handleMouseEvent(d.geonameid,"over"))
+                    .on("mouseout",d=>handleMouseEvent(d.geonameid,"out"))
+
+            d3.select("#regioncontainer")
+                .selectAll("div.continent")
+                    .append("div")
+                    .attr("class","w3-container w3-hide")
+                    .attr("id",d=>"geonameid-"+d.geonameid+"-content")
+                //.on("mouseover")
+
+            continents.forEach(function(x){
+                d3.select("#geonameid-"+x.geonameid+"-content")
+                    .selectAll("div.region")
+                    .data(contToRegion[x.geonameid])
+                    .enter()
+                    .append("div")
+                    .attr("class","region w3-container w3-padding w3-block w3-white w3-hover-grey w3-left-align")
+                    .text(d=>d.name)
+                    .on("mouseover",d=>handleMouseEvent(d.geonameid,"over"))
+                    .on("mouseout",d=>handleMouseEvent(d.geonameid,"out"))
+            })
+
+            d3.select("#countrycontainer")
+                .selectAll("div")
+                .data(Object.values(allCountries))
+                .enter()
+                .append("div")
+                .attr("class","country w3-container w3-padding w3-left-align")
+                .text(d=>d.name)
+                .on("mouseover",d=>handleCountryMouseEvent(d.country,"over"))
+                .on("mouseout",d=>handleCountryMouseEvent(d.country,"out"))
+
+
+            // handle small and undisclosed countries
+            
+            window.shapes.features.forEach(function(f){
+                let this_area = d3.geoArea(f)
+                if (this_area <= minimum_spherical_area)
+                {
+                    if (allCountries.hasOwnProperty(f.id))
+                    {
+                        smallCountries.push({
+                            id: f.id,
+                            name: f.properties.name,
+                            lat: allCountries[f.id].lat,
+                            lon: allCountries[f.id].lon
+                        })
+                    }
+                }
+            })
+
+            let shaped_countries = window.shapes.features.map(f=>f.id);
+            
+            Object.values(allCountries).forEach(function(c){
+                if (shaped_countries.indexOf(c.country) < 0)
+                    smallCountries.push({
+                        id: c.country,
+                        name: c.name,
+                        lat: c.lat,
+                        lon: c.lon
+                    })
+            })
+            
+           
+            d3.select("svg")
+              .selectAll("circle")
+                .data(smallCountries)
+            .enter()
+              .append("circle")
+              .attr("cx",d=>projection([d.lon,d.lat])[0])
+              .attr("cy",d=>projection([d.lon,d.lat])[1])
+              .attr("r",5)
+              .attr("class","smallcountry-unselected")
+              .on("mouseover",function(){d3.select(this).attr("class","smallcountry-selected")})
+              .on("mouseout",function(){d3.select(this).attr("class","smallcountry-unselected")})
+              .append("svg:title")
+                .text(function(d) { return d.name });
+
+
+        })
+    })
+
+    function handleMouseEvent(gid,mode) {
+        let un = mode=="over" ? "" : "un";
+        let children_countries = parentToCountry[gid].map(x=>x['country']);
+        d3.select("svg")
+            .selectAll("path")
+            .filter((d,i) => children_countries.indexOf(d.id) >= 0)
+            .attr("class","country-"+un+"selected")
+
+        d3.select("svg")
+            .selectAll("circle")
+            .filter((d,i) => children_countries.indexOf(d.id) >= 0)
+            .attr("class","smallcountry-"+un+"selected")
+
+        if (mode=="over")
+            filterCountries(gid,mode)
+    }
+
+    function handleCountryMouseEvent(countrycode,mode) {
+        let un = mode=="over" ? "" : "un";
+
+        d3.select("svg")
+            .selectAll("path")
+            .filter((d,i) => countrycode == d.id)
+            .attr("class","country-"+un+"selected")
+
+        d3.select("svg")
+            .selectAll("circle")
+            .filter((d,i) => countrycode == d.id)
+            .attr("class","smallcountry-"+un+"selected")
+
+    }
+
+    function filterCountries(gid,mode)
+    {
+        let children_countries = parentToCountry[gid].map(x=>x['country']);
+
+        d3.selectAll("div.country")
+            .filter((d,i)=>children_countries.indexOf(d.country)>=0)
+            .attr("class","country w3-container w3-padding w3-left-align w3-show");
+        d3.selectAll("div.country")
+            .filter((d,i)=>children_countries.indexOf(d.country)<0)
+            .attr("class","country w3-container w3-padding w3-left-align w3-hide");
+    }
+
+    function accordion(id) {
+      let x = document.getElementById(id);
+      if (x.className.indexOf("w3-show") == -1) {
+        x.className += " w3-show";
+      } else {
+        x.className = x.className.replace(" w3-show", "");
+      }
+    }
+
+</script>
+{% endblock %}
+
+
