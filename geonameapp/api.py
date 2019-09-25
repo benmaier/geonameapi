@@ -215,6 +215,7 @@ class RegionTree(Resource):
             prnt = list(parent)
             children = list(prnt[1])
 
+
             this_region_entry = {}
             this_region_entry['geonameid'] = children[0][0]
             this_region_entry['name'] = children[0][1]
@@ -247,6 +248,36 @@ class RegionTree(Resource):
                 cont_to_region.append(this_region_entry)
             elif children[0][2] == 'RGN':
                 region_to_country.append(this_country_entry)
+
+        # find those regions which are not mapped to continents
+        all_mapped_regions = set([ c['geonameid'] for cont in cont_to_region for c in cont['children']])
+        unmapped_regions = {
+                'geonameid' : -1,
+                'name' : "Unmapped Regions",
+                'children' : [],
+                }
+        cont_to_country.append(deepcopy(unmapped_regions))
+
+        for region in region_to_country:
+            if region['geonameid'] not in all_mapped_regions:
+                unmapped_regions['children'].append({
+                        'geonameid': region['geonameid'],
+                        'name' : region['name']
+                    })
+
+        cont_to_region.append(unmapped_regions)
+
+        # delete regions which do not contain any countries
+        all_mapped_regions = set([ r['geonameid'] for r in region_to_country])
+        for cont in cont_to_region:
+            delete_indexes = []
+            for i, region in enumerate(cont['children']):
+                print
+                if region['geonameid'] not in all_mapped_regions:
+                    delete_indexes.append(i)
+            for index in sorted(delete_indexes, reverse=True):
+                del cont['children'][index]
+
 
         place_info = {}
 
