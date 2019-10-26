@@ -1,0 +1,274 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+    <div class="w3-row">
+        <h1 class="w3-margin-bottom">GeoNameDB Overview of Regions/Continents</h1>
+        <div class="w3-col m3 l3"><div id="regioncontainer"></div></div>
+        <div class="w3-col m9 l9">
+                <div id="mapcontainer" class="w3-align-left w3-container">
+                    <svg id="map" width="1000" height="420"></svg>
+                </div>
+                <h3 id="RegionTitle"></h3>
+                <div id="countrycontainer" class="w3-cell-top" style="column-count: 3;">
+                    
+                </div>
+        </div>
+    </div>
+
+    <script>
+
+    var contToRegion = {};
+    var parentToCountry = {};
+    var allCountries = {};
+    var smallCountries = [];
+    var largeCountries = [];
+    var projection;
+    var minimum_spherical_area = 0.0008;
+    var tooltip;
+    var parentNames = {};
+    
+    //geosearch1 = (new GeoSearchWidget("geosearchRgn")).apiUrl('/api/searchcountryregioncontinent');
+
+    // get the geographical shapes of all countries first
+
+    $.getJSON('/api/countryshapes', function(data) {
+        window.shapes = data;
+
+        // define projection and path generator
+        projection = d3.geoKavrayskiy7()
+                           .rotate([-11,0])
+                           .clipAngle(180)
+        let geopath = d3.geoPath(projection);
+
+        
+        // add tooltip to the map
+        tooltip = d3.select("body")
+            .append("div")
+            .style("position", "absolute")
+            .style("z-index", "10")
+            .style("visibility", "hidden")
+            .text("a simple tooltip");
+
+
+        // add all country shapes to the map
+        d3.select("svg")
+          .selectAll("path")
+          .data(window.shapes.features)
+        .enter()
+          .append("path")
+          .attr("d",geopath)
+          .attr("class","country-unselected")
+          .on("mouseover",function(d){
+              // when hovered over, highlight the country and show its name in the tooltip
+              d3.select(this).attr("class","country-selected");
+              tooltip.style("visibility", "visible");
+              tooltip.text(d.properties.name)
+          })
+          .on("mousemove",function(d){
+              // show the tooltip next to the mouse pointer
+              tooltip.style("top", (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");
+          })
+          .on("mouseout",function(d){
+              // hide the tooltip
+              d3.select(this).attr("class","country-unselected")
+              tooltip.style("visibility", "hidden");
+          })
+
+
+        // next, get hierarchical data of continents and regions from the API
+        $.getJSON('/api/regiontree', function(treedata) {
+            
+            // filter continents first
+            let continents = treedata.contToRegion.map(function(x) { return {name: x.name, geonameid: x.geonameid} });
+            
+            // get a dictionary that maps the geonameid to the name
+            treedata.contToRegion.forEach( x => parentNames[x.geonameid] = x.name );
+            treedata.regionToCountry.forEach( x => parentNames[x.geonameid] = x.name );
+
+            // get a dictionary that maps the geonameid to the region and/or country children
+            treedata.contToRegion.forEach( x => contToRegion[x.geonameid] = x.children);
+            treedata.regionToCountry.forEach( x=> parentToCountry[x.geonameid] = x.children);
+            treedata.contToCountry.forEach( x=> parentToCountry[x.geonameid] = x.children);
+
+            // collect a dictionary that maps the iso_alpha2-property of a country to its other properties
+            Object.values(parentToCountry).forEach(function(x){
+                x.forEach(function(y){
+                    allCountries[y.country] = y
+                })
+            })
+
+            // append continents first. if hovered over, highlight the countries it collects
+            d3.select("#regioncontainer")
+                .selectAll("div.continent")
+                    .data(continents)
+                    .enter()
+                    .append("div")
+                    .attr("class","continent")
+                    .append("div")
+                    .attr("class","w3-button w3-green w3-hover-light-green w3-block w3-left-align")
+                    .attr("id",d=>"geonameid-"+d.geonameid)
+                    .text(d=>d.name)
+                    .on("click",d=>accordion("geonameid-"+d.geonameid+"-content"))
+                    .on("mouseover",d=>handleMouseEvent(d.geonameid,"over"))
+                    .on("mouseout",d=>handleMouseEvent(d.geonameid,"out"))
+
+            // for each continent, append a region container 
+            d3.select("#regioncontainer")
+                .selectAll("div.continent")
+                    .append("div")
+                    .attr("class","w3-container w3-hide")
+                    .attr("id",d=>"geonameid-"+d.geonameid+"-content")
+
+            // for each region per continent, add divs that define the underlying regions
+            continents.forEach(function(x){
+                d3.select("#geonameid-"+x.geonameid+"-content")
+                    .selectAll("div.region")
+                    .data(contToRegion[x.geonameid])
+                    .enter()
+                    .append("div")
+                    .attr("class","region w3-container w3-padding w3-block w3-white w3-hover-light-green w3-left-align")
+                    .text(d=>d.name)
+                    .on("mouseover",d=>handleMouseEvent(d.geonameid,"over"))
+                    .on("mouseout",d=>handleMouseEvent(d.geonameid,"out"))
+            })
+
+
+
+            // add a list of divs that contain all country names
+            let sorted_countries = Object.values(allCountries).sort(function(a,b){if (a.name < b.name) {return -1} else if (a.name>b.name) {return 1} else {return 0}});
+
+            d3.select("#countrycontainer")
+                .selectAll("div")
+                .data(sorted_countries)
+                .enter()
+                .append("div")
+                .attr("class","country w3-white w3-hover-light-green w3-container w3-padding w3-left-align w3-hide")
+                .attr("id",d=>"country-"+d.country)
+                .on("mouseover",d=>handleCountryMouseEvent(d.country,"over"))
+                .on("mouseout",d=>handleCountryMouseEvent(d.country,"out"))
+                .html(d=>`<span class="flag-icon flag-icon-${d.country.toLowerCase()}"></span>&nbsp;${d.name}`)
+           
+
+
+            // handle countries with small surface area (add a circle to the map)
+            
+            window.shapes.features.forEach(function(f){
+                let this_area = d3.geoArea(f)
+                if (this_area <= minimum_spherical_area)
+                {
+                    if (allCountries.hasOwnProperty(f.id))
+                    {
+                        smallCountries.push({
+                            id: f.id,
+                            name: f.properties.name,
+                            lat: allCountries[f.id].lat,
+                            lon: allCountries[f.id].lon
+                        })
+                    }
+                }
+            })
+
+            // filter all countries from the geoname-db and if they do not have
+            // a corresponding shape add a circle
+
+            let shaped_countries = window.shapes.features.map(f=>f.id);
+            
+            Object.values(allCountries).forEach(function(c){
+                if (shaped_countries.indexOf(c.country) < 0)
+                    smallCountries.push({
+                        id: c.country,
+                        name: c.name,
+                        lat: c.lat,
+                        lon: c.lon
+                    })
+            })
+            
+            // add those circles
+            d3.select("svg")
+              .selectAll("circle")
+                .data(smallCountries)
+            .enter()
+              .append("circle")
+              .attr("cx",d=>projection([d.lon,d.lat])[0])
+              .attr("cy",d=>projection([d.lon,d.lat])[1])
+              .attr("r",5)
+              .attr("class","smallcountry-unselected")
+              .on("mouseover",function(){d3.select(this).attr("class","smallcountry-selected")})
+              .on("mouseout",function(){d3.select(this).attr("class","smallcountry-unselected")})
+              .append("svg:title")
+                .text(function(d) { return d.name });
+
+
+        })
+    })
+
+
+    // if a parent region is chosen, highlight all children countries and de-highlight everything else
+
+    function handleMouseEvent(gid,mode) {
+        let un = mode=="over" ? "" : "un";
+        let children_countries = parentToCountry[gid].map(x=>x['country']);
+        d3.select("svg")
+            .selectAll("path")
+            .filter((d,i) => children_countries.indexOf(d.id) >= 0)
+            .attr("class","country-"+un+"selected")
+
+        d3.select("svg")
+            .selectAll("circle")
+            .filter((d,i) => children_countries.indexOf(d.id) >= 0)
+            .attr("class","smallcountry-"+un+"selected")
+
+        if (mode=="over")
+        {
+            filterCountries(gid,mode)
+            $('#RegionTitle').html(parentNames[gid]);
+        }
+    }
+
+    // When hovering over a country-div, highlight the country in the map
+
+    function handleCountryMouseEvent(countrycode,mode) {
+        let un = mode=="over" ? "" : "un";
+
+        d3.select("svg")
+            .selectAll("path")
+            .filter((d,i) => countrycode == d.id)
+            .attr("class","country-"+un+"selected")
+
+        d3.select("svg")
+            .selectAll("circle")
+            .filter((d,i) => countrycode == d.id)
+            .attr("class","smallcountry-"+un+"selected")
+
+    }
+
+    // if a parent region is chosen, show all children-country divs and hide everything else
+
+    function filterCountries(gid,mode)
+    {
+        let children_countries = parentToCountry[gid].map(x=>x['country']);
+
+        d3.selectAll("div.country")
+            .filter((d,i)=>children_countries.indexOf(d.country)>=0)
+            .attr("class","country w3-white w3-hover-light-green w3-container w3-padding w3-left-align w3-show");
+        d3.selectAll("div.country")
+            .filter((d,i)=>children_countries.indexOf(d.country)<0)
+            .attr("class","country w3-white w3-hover-light-green w3-container w3-padding w3-left-align w3-hide");
+    }
+
+    // helper function for the accordion functionality in the menu
+
+    function accordion(id) {
+      let x = document.getElementById(id);
+      if (x.className.indexOf("w3-show") == -1) {
+        x.className += " w3-show";
+      } else {
+        x.className = x.className.replace(" w3-show", "");
+      }
+    }
+
+</script>
+{% endblock %}
+
+
